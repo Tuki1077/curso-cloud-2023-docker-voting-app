@@ -1,63 +1,54 @@
 version: "3.8"
 services:
-
   vote:
     build: ./vote
+    depends_on:
+      - redis
     ports: 
-      - 81:80
-    depends_on:
-      - redis
-      - db
+      - "80:80"
     networks:
-      - front-tier
-      - back-tier
-    volumes:
-      - vote-data:/app/data
-
-  result:
-    build: ./result
-    ports:
-      - 80:80
+      - frontend
+      - backend
+  redis:
+    image: redis
+    restart: always
     depends_on:
-      - redis
-      - db
-    networks:
-      - front-tier
-      - back-tier
+      - worker
     volumes:
-      - result-data:/app/data
-
-
+        - redis_data:/data
+    networks:
+      - backend
   worker:
     build: ./worker
     depends_on:
-      - redis
       - db
     networks:
-      - back-tier
-
-  redis:
-    image: redis:alpine
-    volumes: 
-      - db-data:/var.lib/
-    networks:
-      - back-tier
+      - backend
     
   db:
-    image: postgres:9.4
+    image: postgres
+    restart: always
     environment:
-      POSTGRES_USER: "postgres"
-      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    depends_on:
+      - result
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data/
     networks:
-      - back-tier
-      
+      - backend
+  result:
+    build: ./result
+    ports:
+      - "81:80"
+    networks:
+      - frontend
+      - backend
+
 volumes:
-  db-data:
-  vote-data:
-  result-data:
+    postgres_data:
+    redis_data:
 
 networks:
-  front-tier:
-  back-tier:
+  frontend:
+  backend:
